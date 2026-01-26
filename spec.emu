@@ -1522,6 +1522,197 @@ contributors: Nicolò Ribaudo
           </table>
         </emu-table>
 
+        <p>An <dfn id="importentry-record" variants="ImportEntry Records">ImportEntry Record</dfn> is a Record that digests information about a single declarative import. Each ImportEntry Record has the fields defined in <emu-xref href="#table-importentry-record-fields"></emu-xref>:</p>
+        <emu-table id="table-importentry-record-fields" caption="ImportEntry Record Fields" oldids="table-39">
+          <table>
+            <thead>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+            </thead>
+            <tr>
+              <td>
+                [[ModuleRequest]]
+              </td>
+              <td>
+                a ModuleRequest Record
+              </td>
+              <td>
+                ModuleRequest Record representing the |ModuleSpecifier| and import attributes of the |ImportDeclaration|.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[ImportName]]
+              </td>
+              <td>
+                a String, or ~namespace-object~
+              </td>
+              <td>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value ~namespace-object~ indicates that the import request is for the target module's namespace object.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[LocalName]]
+              </td>
+              <td>
+                a String
+              </td>
+              <td>
+                The name that is used to locally access the imported value from within the importing module.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <ins>[[SelectedNames]]</ins>
+              </td>
+              <td>
+                <ins>a List of Strings, ~all~ or ~empty~</ins>
+              </td>
+              <td>
+                <ins>When [[ImportName]] is ~namespace-object~, this field contains the list of export names to include in the namespace object. For all other values of [[ImportName]], this field is ~empty~.</ins>
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <emu-note>
+          <p><emu-xref href="#table-import-forms-mapping-to-importentry-records"></emu-xref> gives examples of ImportEntry records fields used to represent the syntactic import forms:</p>
+          <emu-table id="table-import-forms-mapping-to-importentry-records" caption="Import Forms Mappings to ImportEntry Records" informative oldids="table-40">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    Import Statement Form
+                  </th>
+                  <th>
+                    [[ModuleRequest]]
+                  </th>
+                  <th>
+                    [[ImportName]]
+                  </th>
+                  <th>
+                    [[LocalName]]
+                  </th>
+                  <th>
+                    <ins>[[SelectedNames]]</ins>
+                  </th>
+                </tr>
+              </thead>
+              <tr>
+                <td>
+                  `import v from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"default"*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import * as ns from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  ~namespace-object~
+                </td>
+                <td>
+                  *"ns"*
+                </td>
+                <td>
+                  <ins>~all~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import {x} from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import {x as v} from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`import {x, y} as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~namespace-object~</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`import {x as a, y as b} as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~namespace-object~</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+            </table>
+          </emu-table>
+        </emu-note>
+
         <emu-clause id="sec-parsemodule" type="abstract operation">
           <h1>
             ParseModule (
@@ -1752,6 +1943,62 @@ contributors: Nicolò Ribaudo
     <emu-clause id="sec-imports">
       <h1>Imports</h1>
 
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        ImportDeclaration :
+          `import` ImportClause FromClause WithClause? `;`
+          `import` `defer` NameSpaceImport FromClause WithClause? `;`
+          `import` ModuleSpecifier WithClause? `;`
+
+        ImportClause :
+          ImportedDefaultBinding
+          NameSpaceImport
+          NamedImports
+          ImportedDefaultBinding `,` NameSpaceImport
+          ImportedDefaultBinding `,` NamedImports
+
+        ImportedDefaultBinding :
+          ImportedBinding
+
+        NameSpaceImport :
+          `*` `as` ImportedBinding
+          <ins>NamedImports `as` ImportedBinding</ins>
+
+        NamedImports :
+          `{` `}`
+          `{` ImportsList `}`
+          `{` ImportsList `,` `}`
+
+        FromClause :
+          `from` ModuleSpecifier
+
+        ImportsList :
+          ImportSpecifier
+          ImportsList `,` ImportSpecifier
+
+        ImportSpecifier :
+          ImportedBinding
+          ModuleExportName `as` ImportedBinding
+
+        ModuleSpecifier :
+          StringLiteral
+
+        ImportedBinding :
+          BindingIdentifier[~Yield, +Await]
+
+        WithClause :
+          `with` `{` `}`
+          `with` `{` WithEntries `,`? `}`
+
+        WithEntries :
+          AttributeKey `:` StringLiteral
+          AttributeKey `:` StringLiteral `,` WithEntries
+
+        AttributeKey :
+          IdentifierName
+          StringLiteral
+      </emu-grammar>
+
       <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="sdo" number="2">
         <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
         <dl class="header">
@@ -1808,14 +2055,21 @@ contributors: Nicolò Ribaudo
         <emu-grammar>ImportedDefaultBinding : ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.
-          1. Let _defaultEntry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: *"default"*, [[LocalName]]: _localName_ }.
+          1. Let _defaultEntry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: *"default"*, [[LocalName]]: _localName_<ins>, [[SelectedNames]]: ~empty~</ins> }.
           1. Return « _defaultEntry_ ».
         </emu-alg>
         <emu-grammar>NameSpaceImport : `*` `as` ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the StringValue of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_<ins>, [[SelectedNames]]: ~all~</ins> }.
           1. Return « _entry_ ».
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _localName_ be the StringValue of |ImportedBinding|.</ins>
+          1. <ins>Let _selectedNames_ be the ImportedNames of |NamedImports|.</ins>
+          1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_, [[SelectedNames]]: _selectedNames_ }.</ins>
+          1. <ins>Return « _entry_ ».</ins>
         </emu-alg>
         <emu-grammar>NamedImports : `{` `}`</emu-grammar>
         <emu-alg>
@@ -1830,14 +2084,14 @@ contributors: Nicolò Ribaudo
         <emu-grammar>ImportSpecifier : ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _localName_, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _localName_, [[LocalName]]: _localName_<ins>, [[SelectedNames]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
         <emu-grammar>ImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _importName_ be the StringValue of |ModuleExportName|.
           1. Let _localName_ be the StringValue of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_<ins>, [[SelectedNames]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
       </emu-clause>
@@ -1850,13 +2104,23 @@ contributors: Nicolò Ribaudo
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>
-          ImportClause :
-            NameSpaceImport
-            ImportedDefaultBinding `,` NameSpaceImport
-        </emu-grammar>
+        <emu-grammar>ImportClause : NameSpaceImport</emu-grammar>
         <emu-alg>
-          1. Return ~all~.
+          1. <ins>Return the ImportedNames of |NameSpaceImport|.</ins>
+        </emu-alg>
+        <emu-grammar>ImportClause : ImportedDefaultBinding `,` NameSpaceImport</emu-grammar>
+        <emu-alg>
+          1. <ins>Let _names1_ be the ImportedNames of |ImportedDefaultBinding|.</ins>
+          1. <ins>Let _names2_ be the ImportedNames of |NameSpaceImport|.</ins>
+          1. <ins>Return MergeImportedNames(_names1_, _names2_).</ins>
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : `*` `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return ~all~.</ins>
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return the ImportedNames of |NamedImports|.</ins>
         </emu-alg>
         <emu-grammar>ImportClause : ImportedDefaultBinding `,` NamedImports</emu-grammar>
         <emu-alg>
