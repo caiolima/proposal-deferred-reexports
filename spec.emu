@@ -52,12 +52,10 @@ contributors: Nicolò Ribaudo
             1. Return GetModuleNamespace(_targetModule_, ~evaluation~, <ins>_binding_.[[ImportedNames]]</ins>).
             1. NOTE: The phase here is always ~evaluation~ because in `import defer * as x from "..."; export { x }`, _binding_.[[BindingName]] is *"x"* and not ~namespace~.
           1. <ins>If _binding_.[[BindingName]] is ~filtered-namespace~, then</ins>
-            1. <ins>Let _env_ be _m_.[[Environment]].</ins>
-            1. <ins>If _env_.HasBinding(_P_) is *true*, then</ins>
-              1. <ins>Return ? _env_.GetBindingValue(_P_, *true*).</ins>
+            1. <ins>For each Record { [[ExportName]], [[Namespace]] } _r_ of _m_.[[IndirectExportedFilteradNamespace]], do</ins>
+              1. <ins>If _r_.[[ExportName]] is _P_, return _r_.[[Namespace]].</ins>
             1. <ins>Let _namespace_ be GetModuleNamespace(_targetModule_, ~evaluation~, _binding_.[[ImportedNames]]).</ins>
-            1. <ins>Perform ! _env_.CreateImmutableBinding(_P_, *true*).</ins>
-            1. <ins>Perform ! _env_.InitializeBinding(_P_, _namespace_).</ins>
+            1. <ins>Append the Record { [[ExportName]]: _P_, [[Namespace]]: _namespace_ } to _m_.[[IndirectExportedFilteradNamespace]].</ins>
             1. <ins>Return _namespace_.</ins>
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
@@ -1559,6 +1557,17 @@ contributors: Nicolò Ribaudo
                 <ins>A list of all the bindings re-exported through `export defer { ... } from "..."`. The List is in source text occurrence order.</ins>
               </td>
             </tr>
+            <tr>
+              <td>
+                <ins>[[IndirectExportedFilteradNamespace]]</ins>
+              </td>
+              <td>
+                <ins>a List of Records with fields [[ExportName]] (a String) and [[Namespace]] (a Module Namespace Object)</ins>
+              </td>
+              <td>
+                <ins>A cache of module namespace objects created for filtered namespace re-exports (`export { ... } as ns from "..."`). Ensures identity stability: accessing the same filtered namespace export always returns the same object.</ins>
+              </td>
+            </tr>
           </table>
         </emu-table>
 
@@ -1796,10 +1805,10 @@ contributors: Nicolò Ribaudo
                 [[ImportName]]
               </td>
               <td>
-                a String, *null*, ~all~, ~all-but-default~, or <ins>~selected~</ins>
+                a String, *null*, ~all~, ~all-but-default~, or <ins>~filtered~</ins>
               </td>
               <td>
-                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|. ~all~ is used for `export * as ns from "mod"` declarations. ~all-but-default~ is used for `export * from "mod"` declarations. <ins>~selected~ is used for `export {x, y} as ns from "mod"` declarations where only selected exports are included in the namespace.</ins>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|. ~all~ is used for `export * as ns from "mod"` declarations. ~all-but-default~ is used for `export * from "mod"` declarations. <ins>~filtered~ is used for `export {x, y} as ns from "mod"` declarations where only selected exports are included in the namespace.</ins>
               </td>
             </tr>
             <tr>
@@ -1821,7 +1830,7 @@ contributors: Nicolò Ribaudo
                 <ins>a List of Strings, ~all~, or ~empty~</ins>
               </td>
               <td>
-                <ins>When [[ImportName]] is ~selected~, this field contains the list of export names to include in the namespace object. When [[ImportName]] is ~all~, this field is ~all~. For all other values of [[ImportName]], this field is ~empty~.</ins>
+                <ins>When [[ImportName]] is ~filtered~, this field contains the list of export names to include in the namespace object. When [[ImportName]] is ~all~, this field is ~all~. For all other values of [[ImportName]], this field is ~empty~.</ins>
               </td>
             </tr>
           </table>
@@ -2063,7 +2072,7 @@ contributors: Nicolò Ribaudo
                   <ins>*"mod"*</ins>
                 </td>
                 <td>
-                  <ins>~selected~</ins>
+                  <ins>~filtered~</ins>
                 </td>
                 <td>
                   <ins>*null*</ins>
@@ -2083,7 +2092,7 @@ contributors: Nicolò Ribaudo
                   <ins>*"mod"*</ins>
                 </td>
                 <td>
-                  <ins>~selected~</ins>
+                  <ins>~filtered~</ins>
                 </td>
                 <td>
                   <ins>*null*</ins>
@@ -2137,7 +2146,7 @@ contributors: Nicolò Ribaudo
                 1. Append _ee_ to _indirectExportEntries_.
             1. <ins>Let _optionalIndirectExportsEntries_ be OptionalIndirectExportEntries of _body_.</ins>
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, <ins>[[OptionalIndirectExportEntries]]: _optionalIndirectExportsEntries_,</ins> [[DFSAncestorIndex]]: ~empty~ }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, <ins>[[OptionalIndirectExportEntries]]: _optionalIndirectExportsEntries_, [[IndirectExportedFilteradNamespace]]: « »,</ins> [[DFSAncestorIndex]]: ~empty~ }.
           </emu-alg>
         </emu-clause>
 
@@ -2335,7 +2344,7 @@ contributors: Nicolò Ribaudo
                     1. Assert: _module_ does not provide the direct binding for this export.
                     1. <ins>Assert: _e_.[[ImportedNames]] is ~all~.</ins>
                     1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~, <ins>[[ImportedNames]]: _e_.[[ImportedNames]]</ins> }.
-                  1. <ins>Else if _e_.[[ImportName]] is ~selected~, then</ins>
+                  1. <ins>Else if _e_.[[ImportName]] is ~filtered~, then</ins>
                     1. <ins>Assert: _module_ does not provide the direct binding for this export.</ins>
                     1. <ins>Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~filtered-namespace~, [[ImportedNames]]: _e_.[[ImportedNames]] }.</ins>
                   1. Else,
@@ -2394,9 +2403,9 @@ contributors: Nicolò Ribaudo
                     1. If _existingRequest_ is ~empty~ and ModuleRequestsKeyEqual(_r_, _nextRequest_) is *true* and _r_.[[Phase]] is _nextRequest_.[[Phase]], then
                       1. Set _existingRequest_ to _r_.
                   1. Let _newImportedNames_ be ~all~.
-                  1. Assert: _oie_.[[ImportName]] is a String, ~selected~, or ~all~.
+                  1. Assert: _oie_.[[ImportName]] is a String, ~filtered~, or ~all~.
                   1. If _oie_.[[ImportName]] is a String, set _newImportedNames_ to « _oie_.[[ImportName]] ».
-                  1. If _oie_.[[ImportName]] is ~selected~, set _newImportedNames_ to _oie_.[[ImportedNames]].
+                  1. If _oie_.[[ImportName]] is ~filtered~, set _newImportedNames_ to _oie_.[[ImportedNames]].
                   1. If _existingRequest_ is ~empty~, then
                     1. Let _request_ be the ModuleRequest Record { [[Specifier]]: _nextRequest_.[[Specifier]], [[Attributes]]: _nextRequest_.[[Attributes]], [[Phase]]: _nextRequest_.[[Phase]], [[ImportedNames]]: _newImportedNames_ }.
                     1. Append _request_ to _requests_.
@@ -2965,7 +2974,7 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. <ins>Let _exportName_ be the StringValue of |ModuleExportName|.</ins>
           1. <ins>Let _importedNames_ be the ImportedNames of |NamedExports|.</ins>
-          1. <ins>Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~selected~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, [[ImportedNames]]: _importedNames_ }.</ins>
+          1. <ins>Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, [[ImportedNames]]: _importedNames_ }.</ins>
           1. <ins>Return « _entry_ ».</ins>
         </emu-alg>
         <emu-grammar>NamedExports : `{` `}`</emu-grammar>
