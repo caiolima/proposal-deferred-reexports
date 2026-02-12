@@ -52,10 +52,13 @@ contributors: Nicolò Ribaudo
             1. Return GetModuleNamespace(_targetModule_, ~evaluation~, <ins>_binding_.[[ImportedNames]]</ins>).
             1. NOTE: The phase here is always ~evaluation~ because in `import defer * as x from "..."; export { x }`, _binding_.[[BindingName]] is *"x"* and not ~namespace~.
           1. <ins>If _binding_.[[BindingName]] is ~filtered-namespace~, then</ins>
-            1. <ins>For each Record { [[ExportName]], [[Namespace]] } _r_ of _m_.[[IndirectExportedFilteradNamespace]], do</ins>
-              1. <ins>If _r_.[[ExportName]] is _P_, return _r_.[[Namespace]].</ins>
+            1. <ins>Let _env_ be _m_.[[Environment]].</ins>
+            1. <ins>Let _localName_ be the string-concatenation of *"\*"*, _P_, and *"\*"*.</ins>
+            1. <ins>If ! _env_.HasBinding(_localName_) is *true*, then</ins>
+              1. <ins>Return ? _env_.GetBindingValue(_localName_, *true*).</ins>
             1. <ins>Let _namespace_ be GetModuleNamespace(_targetModule_, ~evaluation~, _binding_.[[ImportedNames]]).</ins>
-            1. <ins>Append the Record { [[ExportName]]: _P_, [[Namespace]]: _namespace_ } to _m_.[[IndirectExportedFilteradNamespace]].</ins>
+            1. <ins>Perform ! _env_.CreateImmutableBinding(_localName_, *true*).</ins>
+            1. <ins>Perform ! _env_.InitializeBinding(_localName_, _namespace_).</ins>
             1. <ins>Return _namespace_.</ins>
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
@@ -1557,17 +1560,6 @@ contributors: Nicolò Ribaudo
                 <ins>A list of all the bindings re-exported through `export defer { ... } from "..."`. The List is in source text occurrence order.</ins>
               </td>
             </tr>
-            <tr>
-              <td>
-                <ins>[[IndirectExportedFilteradNamespace]]</ins>
-              </td>
-              <td>
-                <ins>a List of Records with fields [[ExportName]] (a String) and [[Namespace]] (a Module Namespace Object)</ins>
-              </td>
-              <td>
-                <ins>A cache of module namespace objects created for filtered namespace re-exports (`export { ... } as ns from "..."`). Ensures identity stability: accessing the same filtered namespace export always returns the same object.</ins>
-              </td>
-            </tr>
           </table>
         </emu-table>
 
@@ -2146,7 +2138,7 @@ contributors: Nicolò Ribaudo
                 1. Append _ee_ to _indirectExportEntries_.
             1. <ins>Let _optionalIndirectExportsEntries_ be OptionalIndirectExportEntries of _body_.</ins>
             1. Let _async_ be _body_ Contains `await`.
-            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, <ins>[[OptionalIndirectExportEntries]]: _optionalIndirectExportsEntries_, [[IndirectExportedFilteradNamespace]]: « »,</ins> [[DFSAncestorIndex]]: ~empty~ }.
+            1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, <ins>[[OptionalIndirectExportEntries]]: _optionalIndirectExportsEntries_,</ins> [[DFSAncestorIndex]]: ~empty~ }.
           </emu-alg>
         </emu-clause>
 
