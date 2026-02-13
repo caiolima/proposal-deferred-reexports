@@ -49,8 +49,17 @@ contributors: Nicolò Ribaudo
           1. Let _targetModule_ be _binding_.[[Module]].
           1. Assert: _targetModule_ is not *undefined*.
           1. If _binding_.[[BindingName]] is ~namespace~, then
-            1. Return GetModuleNamespace(_targetModule_, ~evaluation~).
+            1. Return GetModuleNamespace(_targetModule_, ~evaluation~, <ins>~all~</ins>).
             1. NOTE: The phase here is always ~evaluation~ because in `import defer * as x from "..."; export { x }`, _binding_.[[BindingName]] is *"x"* and not ~namespace~.
+          1. <ins>If _binding_.[[BindingName]] is ~filtered-namespace~, then</ins>
+            1. <ins>Let _env_ be _m_.[[Environment]].</ins>
+            1. <ins>Let _localName_ be the string-concatenation of *"\*"*, _P_, and *"\*"*.</ins>
+            1. <ins>If ! _env_.HasBinding(_localName_) is *true*, then</ins>
+              1. <ins>Return ? _env_.GetBindingValue(_localName_, *true*).</ins>
+            1. <ins>Let _namespace_ be GetModuleNamespace(_targetModule_, ~evaluation~, _binding_.[[NamespaceNamesFilter]]).</ins>
+            1. <ins>Perform ! _env_.CreateImmutableBinding(_localName_, *true*).</ins>
+            1. <ins>Perform ! _env_.InitializeBinding(_localName_, _namespace_).</ins>
+            1. <ins>Return _namespace_.</ins>
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
           1. Return ? _targetEnv_.GetBindingValue(_binding_.[[BindingName]], *true*).
@@ -58,6 +67,40 @@ contributors: Nicolò Ribaudo
         <emu-note>
           <p>ResolveExport is side-effect free. Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result. An implementation might choose to pre-compute or cache the ResolveExport results for the [[Exports]] of each module namespace exotic object.</p>
         </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-modulenamespacecreate" type="abstract operation">
+        <h1>
+          ModuleNamespaceCreate (
+            _module_: a Module Record,
+            _exports_: a List of Strings,
+            _phase_: ~defer~ or ~evaluation~,
+          ): a module namespace exotic object
+        </h1>
+        <dl class="header">
+          <dt>description</dt>
+          <dd>It is used to specify the creation of new module namespace exotic objects.</dd>
+        </dl>
+        <emu-alg>
+          1. Let _internalSlotsList_ be the internal slots listed in <emu-xref href="#table-internal-slots-of-module-namespace-exotic-objects"></emu-xref>.
+          1. Let _M_ be MakeBasicObject(_internalSlotsList_).
+          1. Set _M_'s essential internal methods to the definitions specified in <emu-xref href="#sec-module-namespace-exotic-objects"></emu-xref>.
+          1. Set _M_.[[Module]] to _module_.
+          1. [declared="comparefn"] Let _sortedExports_ be a List whose elements are the elements of _exports_ ordered as if an Array of the same values had been sorted using %Array.prototype.sort% using *undefined* as _comparefn_.
+          1. Set _M_.[[Exports]] to _sortedExports_.
+          1. If _phase_ is ~defer~, then
+            1. <del>Assert: _module_.[[DeferredNamespace]] is ~empty~.</del>
+            1. <del>Set _module_.[[DeferredNamespace]] to _M_.</del>
+            1. Set _M_.[[Deferred]] to *true*.
+            1. Let _toStringTag_ be *"Deferred Module"*.
+          1. Else,
+            1. <del>Assert: _module_.[[Namespace]] is ~empty~.</del>
+            1. <del>Set _module_.[[Namespace]] to _M_.</del>
+            1. Set _M_.[[Deferred]] to *false*.
+            1. Let _toStringTag_ be *"Module"*.
+          1. Create an own data property of _M_ named %Symbol.toStringTag% whose [[Value]] is _toStringTag_ and whose [[Writable]], [[Enumerable]], and [[Configurable]] attributes are *false*.
+          1. Return _M_.
+        </emu-alg>
       </emu-clause>
     </emu-clause>
   </emu-clause>
@@ -146,7 +189,7 @@ contributors: Nicolò Ribaudo
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _link_.[[Value]] &raquo;).
                 1. Return ~unused~.
               1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_, _phase_, and _promiseCapability_ and performs the following steps when called:
-                1. Let _namespace_ be GetModuleNamespace(_module_, _phase_).
+                1. Let _namespace_ be GetModuleNamespace(_module_, _phase_, <ins>~all~</ins>).
                 1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _namespace_ &raquo;).
                 1. Return ~unused~.
               1. If _phase_ is ~defer~, then
@@ -324,7 +367,6 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. Let _specifier_ be SV of |FromClause|.
           1. <ins>Let _importedNames_ be ImportedNames of |NameSpaceImport|.</ins>
-          1. <ins>Assert: _importedNames_ is ~all~.</ins>
           1. Return a List whose sole element is the ModuleRequest Record { [[Specifier]]: _specifier_, [[Attributes]]: « », [[Phase]]: ~defer~, <ins>[[ImportedNames]]: _importedNames_</ins> }.
         </emu-alg>
         <emu-grammar>
@@ -334,7 +376,6 @@ contributors: Nicolò Ribaudo
           1. Let _specifier_ be SV of |FromClause|.
           1. Let _attributes_ be WithClauseToAttributes of |WithClause|.
           1. <ins>Let _importedNames_ be ImportedNames of |NameSpaceImport|.</ins>
-          1. <ins>Assert: _importedNames_ is ~all~.</ins>
           1. Return a List whose sole element is the ModuleRequest Record { [[Specifier]]: _specifier_, [[Attributes]]: _attributes_, [[Phase]]: ~defer~, <ins>[[ImportedNames]]: _importedNames_</ins> }.
         </emu-alg>
         <emu-grammar>
@@ -1522,6 +1563,540 @@ contributors: Nicolò Ribaudo
           </table>
         </emu-table>
 
+        <p>An <dfn id="importentry-record" variants="ImportEntry Records">ImportEntry Record</dfn> is a Record that digests information about a single declarative import. Each ImportEntry Record has the fields defined in <emu-xref href="#table-importentry-record-fields"></emu-xref>:</p>
+        <emu-table id="table-importentry-record-fields" caption="ImportEntry Record Fields" oldids="table-39">
+          <table>
+            <thead>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+            </thead>
+            <tr>
+              <td>
+                [[ModuleRequest]]
+              </td>
+              <td>
+                a ModuleRequest Record
+              </td>
+              <td>
+                ModuleRequest Record representing the |ModuleSpecifier| and import attributes of the |ImportDeclaration|.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[ImportName]]
+              </td>
+              <td>
+                a String, ~namespace-object~, or ~filtered-namespace-object~
+              </td>
+              <td>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. The value ~namespace-object~ indicates that the import request is for the target module's namespace object.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[LocalName]]
+              </td>
+              <td>
+                a String
+              </td>
+              <td>
+                The name that is used to locally access the imported value from within the importing module.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <ins>[[NamespaceNamesFilter]]</ins>
+              </td>
+              <td>
+                <ins>a List of Strings or ~empty~</ins>
+              </td>
+              <td>
+                <ins>When [[ImportName]] is ~filtered-namespace-object~, this field contains the list of export names to include in the namespace object. For all other values of [[ImportName]], this field is ~empty~.</ins>
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <emu-note>
+          <p><emu-xref href="#table-import-forms-mapping-to-importentry-records"></emu-xref> gives examples of ImportEntry records fields used to represent the syntactic import forms:</p>
+          <emu-table id="table-import-forms-mapping-to-importentry-records" caption="Import Forms Mappings to ImportEntry Records" informative oldids="table-40">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    Import Statement Form
+                  </th>
+                  <th>
+                    [[ModuleRequest]]
+                  </th>
+                  <th>
+                    [[ImportName]]
+                  </th>
+                  <th>
+                    [[LocalName]]
+                  </th>
+                  <th>
+                    <ins>[[NamespaceNamesFilter]]</ins>
+                  </th>
+                </tr>
+              </thead>
+              <tr>
+                <td>
+                  `import v from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"default"*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import * as ns from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  ~namespace-object~
+                </td>
+                <td>
+                  *"ns"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import {x} from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `import {x as v} from "mod";`
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`import {x, y} as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~filtered-namespace-object~</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`import {x as a, y as b} as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~filtered-namespace-object~</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+            </table>
+          </emu-table>
+        </emu-note>
+
+        <p>An <dfn id="exportentry-record" variants="ExportEntry Records">ExportEntry Record</dfn> is a Record that digests information about a single declarative export. Each ExportEntry Record has the fields defined in <emu-xref href="#table-exportentry-records"></emu-xref>:</p>
+        <emu-table id="table-exportentry-records" caption="ExportEntry Record Fields" oldids="table-41">
+          <table>
+            <thead>
+              <tr>
+                <th>
+                  Field Name
+                </th>
+                <th>
+                  Value Type
+                </th>
+                <th>
+                  Meaning
+                </th>
+              </tr>
+            </thead>
+            <tr>
+              <td>
+                [[ExportName]]
+              </td>
+              <td>
+                a String or *null*
+              </td>
+              <td>
+                The name used to export this binding by this module.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[ModuleRequest]]
+              </td>
+              <td>
+                a ModuleRequest Record or *null*
+              </td>
+              <td>
+                The ModuleRequest Record representing the |ModuleSpecifier| and import attributes of the |ExportDeclaration|. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[ImportName]]
+              </td>
+              <td>
+                a String, *null*, ~all~, ~all-but-default~, or <ins>~filtered~</ins>
+              </td>
+              <td>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|. ~all~ is used for `export * as ns from "mod"` declarations. ~all-but-default~ is used for `export * from "mod"` declarations. <ins>~filtered~ is used for `export {x, y} as ns from "mod"` declarations where only selected exports are included in the namespace.</ins>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                [[LocalName]]
+              </td>
+              <td>
+                a String or *null*
+              </td>
+              <td>
+                The name that is used to locally access the exported value from within the importing module. *null* if the exported value is not locally accessible from within the module.
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <ins>[[NamespaceNamesFilter]]</ins>
+              </td>
+              <td>
+                <ins>a List of Strings or ~empty~</ins>
+              </td>
+              <td>
+                <ins>When [[ImportName]] is ~filtered~, this field contains the list of export names to include in the namespace object. For all other values of [[ImportName]], this field is ~empty~.</ins>
+              </td>
+            </tr>
+          </table>
+        </emu-table>
+        <emu-note>
+          <p><emu-xref href="#table-export-forms-mapping-to-exportentry-records"></emu-xref> gives examples of the ExportEntry record fields used to represent the syntactic export forms:</p>
+          <emu-table id="table-export-forms-mapping-to-exportentry-records" caption="Export Forms Mappings to ExportEntry Records" informative oldids="table-42">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    Export Statement Form
+                  </th>
+                  <th>
+                    [[ExportName]]
+                  </th>
+                  <th>
+                    [[ModuleRequest]]
+                  </th>
+                  <th>
+                    [[ImportName]]
+                  </th>
+                  <th>
+                    [[LocalName]]
+                  </th>
+                  <th>
+                    <ins>[[NamespaceNamesFilter]]</ins>
+                  </th>
+                </tr>
+              </thead>
+              <tr>
+                <td>
+                  `export var v;`
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export default function f() {}`
+                </td>
+                <td>
+                  *"default"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"f"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export default function () {}`
+                </td>
+                <td>
+                  *"default"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"\*default\*"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export default 42;`
+                </td>
+                <td>
+                  *"default"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"\*default\*"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export {x};`
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export {v as x};`
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export {x} from "mod";`
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export {v as x} from "mod";`
+                </td>
+                <td>
+                  *"x"*
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  *"v"*
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export * from "mod";`
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  ~all-but-default~
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  `export * as ns from "mod";`
+                </td>
+                <td>
+                  *"ns"*
+                </td>
+                <td>
+                  *"mod"*
+                </td>
+                <td>
+                  ~all~
+                </td>
+                <td>
+                  *null*
+                </td>
+                <td>
+                  <ins>~empty~</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`export {x, y} as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~filtered~</ins>
+                </td>
+                <td>
+                  <ins>*null*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <ins>`export { x as a1, y as a2 } as ns from "mod";`</ins>
+                </td>
+                <td>
+                  <ins>*"ns"*</ins>
+                </td>
+                <td>
+                  <ins>*"mod"*</ins>
+                </td>
+                <td>
+                  <ins>~filtered~</ins>
+                </td>
+                <td>
+                  <ins>*null*</ins>
+                </td>
+                <td>
+                  <ins>« *"x"*, *"y"* »</ins>
+                </td>
+              </tr>
+            </table>
+          </emu-table>
+        </emu-note>
+
         <emu-clause id="sec-parsemodule" type="abstract operation">
           <h1>
             ParseModule (
@@ -1555,7 +2130,7 @@ contributors: Nicolò Ribaudo
                     1. Append _ee_ to _localExportEntries_.
                   1. Else,
                     1. NOTE: This is a re-export of a single name.
-                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
+                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _indirectExportEntries_.
               1. Else if _ee_.[[ImportName]] is ~all-but-default~, then
                 1. Assert: _ee_.[[ExportName]] is *null*.
                 1. Append _ee_ to _starExportEntries_.
@@ -1565,6 +2140,123 @@ contributors: Nicolò Ribaudo
             1. Let _async_ be _body_ Contains `await`.
             1. Return Source Text Module Record { [[Realm]]: _realm_, [[Environment]]: ~empty~, [[Namespace]]: ~empty~, [[CycleRoot]]: ~empty~, [[HasTLA]]: _async_, [[AsyncEvaluationOrder]]: ~unset~, [[TopLevelCapability]]: ~empty~, [[AsyncParentModules]]: « », [[PendingAsyncDependencies]]: ~empty~, [[Status]]: ~new~, [[EvaluationError]]: ~empty~, [[HostDefined]]: _hostDefined_, [[ECMAScriptCode]]: _body_, [[Context]]: ~empty~, [[ImportMeta]]: ~empty~, [[RequestedModules]]: _requestedModules_, [[LoadedModules]]: « », [[ImportEntries]]: _importEntries_, [[LocalExportEntries]]: _localExportEntries_, [[IndirectExportEntries]]: _indirectExportEntries_, [[StarExportEntries]]: _starExportEntries_, <ins>[[OptionalIndirectExportEntries]]: _optionalIndirectExportsEntries_,</ins> [[DFSAncestorIndex]]: ~empty~ }.
           </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-source-text-module-record-initialize-environment" type="concrete method" number="4">
+          <h1>InitializeEnvironment ( ): either a normal completion containing ~unused~ or a throw completion</h1>
+          <dl class="header">
+            <dt>for</dt>
+            <dd>a Source Text Module Record _module_</dd>
+          </dl>
+
+          <emu-alg>
+            1. For each ExportEntry Record _e_ of _module_.[[IndirectExportEntries]], do
+              1. Let _resolution_ be _module_.ResolveExport(_e_.[[ExportName]]).
+              1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
+              1. Assert: _resolution_ is a ResolvedBinding Record.
+            1. Assert: All named exports from _module_ are resolvable.
+            1. Let _realm_ be _module_.[[Realm]].
+            1. Assert: _realm_ is not *undefined*.
+            1. Let _env_ be NewModuleEnvironment(_realm_.[[GlobalEnv]]).
+            1. Set _module_.[[Environment]] to _env_.
+            1. For each ImportEntry Record _in_ of _module_.[[ImportEntries]], do
+              1. Let _importedModule_ be GetImportedModule(_module_, _in_.[[ModuleRequest]]).
+              1. If _in_.[[ImportName]] is ~namespace-object~, then
+                1. Let _namespace_ be GetModuleNamespace(_importedModule_, _in_.[[ModuleRequest]].[[Phase]], <ins>~all~</ins>).
+                1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
+                1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+              1. <ins>If _in_.[[ImportName]] is ~filtered-namespace-object~, then</ins>
+                1. <ins>Let _namespace_ be GetModuleNamespace(_importedModule_, _in_.[[ModuleRequest]].[[Phase]], _in_.[[NamespaceNamesFilter]]).</ins>
+                1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
+                1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).</ins>
+              1. Else,
+                1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
+                1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
+                1. If _resolution_.[[BindingName]] is ~namespace~, then
+                  1. NOTE: In this case we have an `export * as ns from "";` declaration. `import * as ns from ""; export { ns }` indirect re-exports have _resolution_.[[BindingName]] set to *"ns"*.
+                  1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]], ~evaluation~, <ins>~all~</ins>).
+                  1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
+                  1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
+                1. If _resolution_.[[BindingName]] is ~filtered-namespace~, then
+                  1. <ins>Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]], ~evaluation~, <ins>_resolution_.[[NamespaceNamesFilter]]</ins>).</ins>
+                  1. <ins>Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).</ins>
+                  1. <ins>Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).</ins>
+                1. Else,
+                  1. Perform CreateImportBinding(_env_, _in_.[[LocalName]], _resolution_.[[Module]], _resolution_.[[BindingName]]).
+            1. Let _moduleContext_ be a new ECMAScript code execution context.
+            1. Set the Function of _moduleContext_ to *null*.
+            1. Assert: _module_.[[Realm]] is not *undefined*.
+            1. Set the Realm of _moduleContext_ to _module_.[[Realm]].
+            1. Set the ScriptOrModule of _moduleContext_ to _module_.
+            1. Set the VariableEnvironment of _moduleContext_ to _module_.[[Environment]].
+            1. Set the LexicalEnvironment of _moduleContext_ to _module_.[[Environment]].
+            1. Set the PrivateEnvironment of _moduleContext_ to *null*.
+            1. Set _module_.[[Context]] to _moduleContext_.
+            1. Push _moduleContext_ onto the execution context stack; _moduleContext_ is now the running execution context.
+            1. Let _code_ be _module_.[[ECMAScriptCode]].
+            1. Let _varDeclarations_ be the VarScopedDeclarations of _code_.
+            1. Let _declaredVarNames_ be a new empty List.
+            1. For each element _d_ of _varDeclarations_, do
+              1. For each element _dn_ of the BoundNames of _d_, do
+                1. If _declaredVarNames_ does not contain _dn_, then
+                  1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
+                  1. Perform ! _env_.InitializeBinding(_dn_, *undefined*).
+                  1. Append _dn_ to _declaredVarNames_.
+            1. Let _lexDeclarations_ be the LexicallyScopedDeclarations of _code_.
+            1. Let _privateEnv_ be *null*.
+            1. For each element _d_ of _lexDeclarations_, do
+              1. For each element _dn_ of the BoundNames of _d_, do
+                1. If IsConstantDeclaration of _d_ is *true*, then
+                  1. Perform ! _env_.CreateImmutableBinding(_dn_, *true*).
+                1. Else,
+                  1. Perform ! _env_.CreateMutableBinding(_dn_, *false*).
+                1. If _d_ is either a |FunctionDeclaration|, a |GeneratorDeclaration|, an |AsyncFunctionDeclaration|, or an |AsyncGeneratorDeclaration|, then
+                  1. Let _fo_ be InstantiateFunctionObject of _d_ with arguments _env_ and _privateEnv_.
+                  1. Perform ! _env_.InitializeBinding(_dn_, _fo_).
+            1. Remove _moduleContext_ from the execution context stack.
+            1. Return ~unused~.
+          </emu-alg>
+        </emu-clause>
+
+        <emu-clause id="sec-getmodulenamespace" type="abstract operation" number="13">
+          <h1>
+            GetModuleNamespace (
+              _module_: an instance of a concrete subclass of Module Record,
+              _phase_: ~defer~ or ~evaluation~,
+              <ins>_importedNames_: ~all~ or a List of Strings</ins>
+            ): a Module Namespace Object
+          </h1>
+          <dl class="header">
+            <dt>description</dt>
+            <dd>It retrieves the Module Namespace Object representing _module_'s exports, lazily creating it the first time it was requested, and storing it in _module_.[[Namespace]] for future retrieval.</dd>
+          </dl>
+
+          <emu-alg>
+            1. Assert: If _module_ is a Cyclic Module Record, then _module_.[[Status]] is not ~new~ or ~unlinked~.
+            1. <ins>Let _namespace_ be ~empty~.</ins>
+            1. <ins>If _importedNames_ is ~all~, then</ins>
+              1. <ins>If _phase_ is ~defer~, set _namespace_ to _module_.[[DeferredNamespace]]. Otherwise, set _namespace_ to _module_.[[Namespace]].</ins>
+            1. If _namespace_ is ~empty~, then
+              1. Let _exportedNames_ be _module_.GetExportedNames().
+              1. Let _unambiguousNames_ be a new empty List.
+              1. For each element _name_ of _exportedNames_, do
+                1. <ins>If _importedNames_ is ~all~ or, _importedNames_ contains _name_, then</ins>
+                  1. If _phase_ is not ~defer~ or _name_ is not *"then"*, then
+                    1. Let _resolution_ be _module_.ResolveExport(_name_).
+                    1. If _resolution_ is a ResolvedBinding Record, append _name_ to _unambiguousNames_.
+              1. Set _namespace_ to ModuleNamespaceCreate(_module_, _unambiguousNames_, _phase_).
+              1. <ins>If _importedNames_ is ~all~, then</ins>
+                1. <ins>If _phase_ is ~defer~, then</ins>
+                  1. <ins>Assert: _module_.[[DeferredNamespace]] is ~empty~.</ins>
+                  1. <ins>Set _module_.[[DeferredNamespace]] to _namespace_.</ins>
+                1. Else,
+                  1. <ins>Assert: _module_.[[Namespace]] is ~empty~.</ins>
+                  1. <ins>Set _module_.[[Namespace]] to _namespace_.</ins>
+            1. Return _namespace_.
+          </emu-alg>
+          <emu-note>
+            <p>GetModuleNamespace never throws. Instead, unresolvable names are simply excluded from the namespace at this point. They will lead to a real linking error later unless they are all ambiguous star exports that are not explicitly requested anywhere.</p>
+          </emu-note>
         </emu-clause>
 
         <emu-clause id="sec-source-text-module-record-module-record-methods">
@@ -1628,7 +2320,7 @@ contributors: Nicolò Ribaudo
               <dt>description</dt>
               <dd>
                 <p>ResolveExport attempts to resolve an imported binding to the actual defining module and local binding name. The defining module may be the module represented by the Module Record this method was invoked on or some other module that is imported by that module. The parameter _resolveSet_ is used to detect unresolved circular import/export paths. If a pair consisting of specific Module Record and _exportName_ is reached that is already in _resolveSet_, an import circularity has been encountered. Before recursively calling ResolveExport, a pair consisting of _module_ and _exportName_ is added to _resolveSet_.</p>
-                <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]] } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, ~ambiguous~ is returned.</p>
+                <p>If a defining module is found, a ResolvedBinding Record { [[Module]], [[BindingName]], <ins>[[NamespaceNamesFilter]]</ins> } is returned. This record identifies the resolved binding of the originally requested export, unless this is the export of a namespace with no local binding. In this case, [[BindingName]] will be set to ~namespace~. <ins>If only selected exports are included, [[BindingName]] will be set to ~filtered-namespace~ and [[NamespaceNamesFilter]] will be a List of the selected export names. Otherwise, [[ImportedNames]] is ~empty~.</ins> If no definition was found or the request is found to be circular, *null* is returned. If the request is found to be ambiguous, ~ambiguous~ is returned.</p>
               </dd>
             </dl>
 
@@ -1643,7 +2335,7 @@ contributors: Nicolò Ribaudo
               1. For each ExportEntry Record _e_ of _module_.[[LocalExportEntries]], do
                 1. If _e_.[[ExportName]] is _exportName_, then
                   1. Assert: _module_ provides the direct binding for this export.
-                  1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]] }.
+                  1. Return ResolvedBinding Record { [[Module]]: _module_, [[BindingName]]: _e_.[[LocalName]], <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
               1. <ins>Let _allIndirectEntries_ be the list-concatenation of _module_.[[IndirectExportEntries]] and _module_.[[OptionalIndirectExportEntries]].</ins>
               1. For each ExportEntry Record _e_ of <del>_module_.[[IndirectExportEntries]]</del><ins>_allIndirectEntries_</ins>, do
                 1. If _e_.[[ExportName]] is _exportName_, then
@@ -1651,7 +2343,11 @@ contributors: Nicolò Ribaudo
                   1. Let _importedModule_ be GetImportedModule(_module_, _e_.[[ModuleRequest]]).
                   1. If _e_.[[ImportName]] is ~all~, then
                     1. Assert: _module_ does not provide the direct binding for this export.
-                    1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
+                    1. <ins>Assert: _e_.[[NamespaceNamesFilter]] is ~empty~.</ins>
+                    1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
+                  1. <ins>Else if _e_.[[ImportName]] is ~filtered~, then</ins>
+                    1. <ins>Assert: _module_ does not provide the direct binding for this export.</ins>
+                    1. <ins>Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~filtered-namespace~, [[NamespaceNamesFilter]]: _e_.[[NamespaceNamesFilter]] }.</ins>
                   1. Else,
                     1. Assert: _module_ imports a specific binding for this export.
                     1. Assert: _e_.[[ImportName]] is a String.
@@ -1708,8 +2404,9 @@ contributors: Nicolò Ribaudo
                     1. If _existingRequest_ is ~empty~ and ModuleRequestsKeyEqual(_r_, _nextRequest_) is *true* and _r_.[[Phase]] is _nextRequest_.[[Phase]], then
                       1. Set _existingRequest_ to _r_.
                   1. Let _newImportedNames_ be ~all~.
-                  1. Assert: _oie_.[[ImportName]] is a String or ~all~.
+                  1. Assert: _oie_.[[ImportName]] is a String, ~filtered~, or ~all~.
                   1. If _oie_.[[ImportName]] is a String, set _newImportedNames_ to « _oie_.[[ImportName]] ».
+                  1. If _oie_.[[ImportName]] is ~filtered~, set _newImportedNames_ to _oie_.[[NamespaceNamesFilter]].
                   1. If _existingRequest_ is ~empty~, then
                     1. Let _request_ be the ModuleRequest Record { [[Specifier]]: _nextRequest_.[[Specifier]], [[Attributes]]: _nextRequest_.[[Attributes]], [[Phase]]: _nextRequest_.[[Phase]], [[ImportedNames]]: _newImportedNames_ }.
                     1. Append _request_ to _requests_.
@@ -1751,6 +2448,62 @@ contributors: Nicolò Ribaudo
 
     <emu-clause id="sec-imports">
       <h1>Imports</h1>
+
+      <h2>Syntax</h2>
+      <emu-grammar type="definition">
+        ImportDeclaration :
+          `import` ImportClause FromClause WithClause? `;`
+          `import` `defer` NameSpaceImport FromClause WithClause? `;`
+          `import` ModuleSpecifier WithClause? `;`
+
+        ImportClause :
+          ImportedDefaultBinding
+          NameSpaceImport
+          NamedImports
+          ImportedDefaultBinding `,` NameSpaceImport
+          ImportedDefaultBinding `,` NamedImports
+
+        ImportedDefaultBinding :
+          ImportedBinding
+
+        NameSpaceImport :
+          `*` `as` ImportedBinding
+          <ins>NamedImports `as` ImportedBinding</ins>
+
+        NamedImports :
+          `{` `}`
+          `{` ImportsList `}`
+          `{` ImportsList `,` `}`
+
+        FromClause :
+          `from` ModuleSpecifier
+
+        ImportsList :
+          ImportSpecifier
+          ImportsList `,` ImportSpecifier
+
+        ImportSpecifier :
+          ImportedBinding
+          ModuleExportName `as` ImportedBinding
+
+        ModuleSpecifier :
+          StringLiteral
+
+        ImportedBinding :
+          BindingIdentifier[~Yield, +Await]
+
+        WithClause :
+          `with` `{` `}`
+          `with` `{` WithEntries `,`? `}`
+
+        WithEntries :
+          AttributeKey `:` StringLiteral
+          AttributeKey `:` StringLiteral `,` WithEntries
+
+        AttributeKey :
+          IdentifierName
+          StringLiteral
+      </emu-grammar>
 
       <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="sdo" number="2">
         <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
@@ -1808,14 +2561,21 @@ contributors: Nicolò Ribaudo
         <emu-grammar>ImportedDefaultBinding : ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.
-          1. Let _defaultEntry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: *"default"*, [[LocalName]]: _localName_ }.
+          1. Let _defaultEntry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: *"default"*, [[LocalName]]: _localName_<ins>, [[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _defaultEntry_ ».
         </emu-alg>
         <emu-grammar>NameSpaceImport : `*` `as` ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the StringValue of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_<ins>, [[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _localName_ be the StringValue of |ImportedBinding|.</ins>
+          1. <ins>Let _importedNames_ be the ImportedNames of |NamedImports|.</ins>
+          1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered-namespace-object~, [[LocalName]]: _localName_, [[NamespaceNamesFilter]]: _importedNames_ }.</ins>
+          1. <ins>Return « _entry_ ».</ins>
         </emu-alg>
         <emu-grammar>NamedImports : `{` `}`</emu-grammar>
         <emu-alg>
@@ -1830,14 +2590,14 @@ contributors: Nicolò Ribaudo
         <emu-grammar>ImportSpecifier : ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _localName_ be the sole element of the BoundNames of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _localName_, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _localName_, [[LocalName]]: _localName_<ins>, [[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
         <emu-grammar>ImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
         <emu-alg>
           1. Let _importName_ be the StringValue of |ModuleExportName|.
           1. Let _localName_ be the StringValue of |ImportedBinding|.
-          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_ }.
+          1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_<ins>, [[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
       </emu-clause>
@@ -1850,13 +2610,23 @@ contributors: Nicolò Ribaudo
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>
-          ImportClause :
-            NameSpaceImport
-            ImportedDefaultBinding `,` NameSpaceImport
-        </emu-grammar>
+        <emu-grammar>ImportClause : NameSpaceImport</emu-grammar>
         <emu-alg>
-          1. Return ~all~.
+          1. <ins>Return the ImportedNames of |NameSpaceImport|.</ins>
+        </emu-alg>
+        <emu-grammar>ImportClause : ImportedDefaultBinding `,` NameSpaceImport</emu-grammar>
+        <emu-alg>
+          1. <ins>Let _names1_ be the ImportedNames of |ImportedDefaultBinding|.</ins>
+          1. <ins>Let _names2_ be the ImportedNames of |NameSpaceImport|.</ins>
+          1. <ins>Return MergeImportedNames(_names1_, _names2_).</ins>
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : `*` `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return ~all~.</ins>
+        </emu-alg>
+        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return the ImportedNames of |NamedImports|.</ins>
         </emu-alg>
         <emu-grammar>ImportClause : ImportedDefaultBinding `,` NamedImports</emu-grammar>
         <emu-alg>
@@ -1887,6 +2657,26 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. Let _importedName_ be the StringValue of |ModuleExportName|.
           1. Return « _importedName_ ».
+        </emu-alg>
+        <emu-grammar><ins>NamedExports : `{` `}`</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Return « ».</ins>
+        </emu-alg>
+        <emu-grammar><ins>ExportsList : ExportsList `,` ExportSpecifier</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _names1_ be the ImportedNames of |ExportsList|.</ins>
+          1. <ins>Let _names2_ be the ImportedNames of |ExportSpecifier|.</ins>
+          1. <ins>Return MergeImportedNames(_names1_, _names2_).</ins>
+        </emu-alg>
+        <emu-grammar><ins>ExportSpecifier : ModuleExportName</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _importedName_ be the StringValue of |ModuleExportName|.</ins>
+          1. <ins>Return « _importedName_ ».</ins>
+        </emu-alg>
+        <emu-grammar><ins>ExportSpecifier : ModuleExportName `as` ModuleExportName</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _importedName_ be the StringValue of the first |ModuleExportName|.</ins>
+          1. <ins>Return « _importedName_ ».</ins>
         </emu-alg>
 
         <emu-clause id="sec-MergeImportedNames" type="abstract operation">
@@ -1960,6 +2750,7 @@ contributors: Nicolò Ribaudo
         <ins>
         NamedNamespaceExport :
           `*` `as` ModuleExportName
+          NamedExports `as` ModuleExportName
         </ins>
 
         NamedExports :
@@ -2031,9 +2822,17 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportFromClause : `*` `as` ModuleExportName</emu-grammar>
+        <emu-grammar>ExportFromClause : NamedNamespaceExport</emu-grammar>
         <emu-alg>
-          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
+          1. Return the ExportedNames of |NamedNamespaceExport|.
+        </emu-alg>
+        <emu-grammar>
+          <ins>NamedNamespaceExport :
+            `*` `as` ModuleExportName
+            NamedExports `as` ModuleExportName</ins>
+        </emu-grammar>
+        <emu-alg>
+          1. <ins>Return a List whose sole element is the StringValue of |ModuleExportName|.</ins>
         </emu-alg>
         <emu-grammar>ExportFromClause : NamedExports</emu-grammar>
         <emu-alg>
@@ -2116,7 +2915,7 @@ contributors: Nicolò Ribaudo
           1. Let _entries_ be a new empty List.
           1. Let _names_ be the BoundNames of |VariableStatement|.
           1. For each element _name_ of _names_, do
-            1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_ } to _entries_.
+            1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _entries_.
           1. Return _entries_.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` Declaration</emu-grammar>
@@ -2124,29 +2923,94 @@ contributors: Nicolò Ribaudo
           1. Let _entries_ be a new empty List.
           1. Let _names_ be the BoundNames of |Declaration|.
           1. For each element _name_ of _names_, do
-            1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_ } to _entries_.
+            1. Append the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _name_, [[ExportName]]: _name_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _entries_.
           1. Return _entries_.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` `default` HoistableDeclaration</emu-grammar>
         <emu-alg>
           1. Let _names_ be BoundNames of |HoistableDeclaration|.
           1. Let _localName_ be the sole element of _names_.
-          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"* }.
+          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"*, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` `default` ClassDeclaration</emu-grammar>
         <emu-alg>
           1. Let _names_ be BoundNames of |ClassDeclaration|.
           1. Let _localName_ be the sole element of _names_.
-          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"* }.
+          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: _localName_, [[ExportName]]: *"default"*, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
         </emu-alg>
         <emu-grammar>ExportDeclaration : `export` `default` AssignmentExpression `;`</emu-grammar>
         <emu-alg>
-          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: *"\*default\*"*, [[ExportName]]: *"default"* }.
+          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: *null*, [[ImportName]]: *null*, [[LocalName]]: *"\*default\*"*, [[ExportName]]: *"default"*, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
         <emu-note>
           <p>*"\*default\*"* is used within this specification as a synthetic name for anonymous default export values. See <emu-xref href="#note-star-default-star">this note</emu-xref> for more details.</p>
         </emu-note>
+      </emu-clause>
+
+      <emu-clause id="sec-static-semantics-exportentriesformodule" type="sdo">
+        <h1>
+          Static Semantics: ExportEntriesForModule (
+            _module_: a ModuleRequest Record or *null*,
+          ): a List of ExportEntry Records
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-grammar>ExportFromClause : `*`</emu-grammar>
+        <emu-alg>
+          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all-but-default~, [[LocalName]]: *null*, [[ExportName]]: *null*, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
+          1. Return « _entry_ ».
+        </emu-alg>
+        <emu-grammar>ExportFromClause : NamedNamespaceExport</emu-grammar>
+        <emu-alg>
+          1. Return the ExportEntriesForModule of |NamedNamespaceExport| with argument _module_.
+        </emu-alg>
+        <emu-grammar>NamedNamespaceExport : `*` `as` ModuleExportName</emu-grammar>
+        <emu-alg>
+          1. Let _exportName_ be the StringValue of |ModuleExportName|.
+          1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
+          1. Return « _entry_ ».
+        </emu-alg>
+        <emu-grammar><ins>NamedNamespaceExport : NamedExports `as` ModuleExportName</ins></emu-grammar>
+        <emu-alg>
+          1. <ins>Let _exportName_ be the StringValue of |ModuleExportName|.</ins>
+          1. <ins>Let _importedNames_ be the ImportedNames of |NamedExports|.</ins>
+          1. <ins>Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, [[NamespaceNamesFilter]]: _importedNames_ }.</ins>
+          1. <ins>Return « _entry_ ».</ins>
+        </emu-alg>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
+        <emu-alg>
+          1. Return a new empty List.
+        </emu-alg>
+        <emu-grammar>ExportsList : ExportsList `,` ExportSpecifier</emu-grammar>
+        <emu-alg>
+          1. Let _specs1_ be the ExportEntriesForModule of |ExportsList| with argument _module_.
+          1. Let _specs2_ be the ExportEntriesForModule of |ExportSpecifier| with argument _module_.
+          1. Return the list-concatenation of _specs1_ and _specs2_.
+        </emu-alg>
+        <emu-grammar>ExportSpecifier : ModuleExportName</emu-grammar>
+        <emu-alg>
+          1. Let _sourceName_ be the StringValue of |ModuleExportName|.
+          1. If _module_ is *null*, then
+            1. Let _localName_ be _sourceName_.
+            1. Let _importName_ be *null*.
+          1. Else,
+            1. Let _localName_ be *null*.
+            1. Let _importName_ be _sourceName_.
+          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_, [[ExportName]]: _sourceName_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
+        </emu-alg>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
+        <emu-alg>
+          1. Let _sourceName_ be the StringValue of the first |ModuleExportName|.
+          1. Let _exportName_ be the StringValue of the second |ModuleExportName|.
+          1. If _module_ is *null*, then
+            1. Let _localName_ be _sourceName_.
+            1. Let _importName_ be *null*.
+          1. Else,
+            1. Let _localName_ be *null*.
+            1. Let _importName_ be _sourceName_.
+          1. Return a List whose sole element is a new ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: _importName_, [[LocalName]]: _localName_, [[ExportName]]: _exportName_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
+        </emu-alg>
       </emu-clause>
 
       <emu-clause id="sec-static-semantics-optionalindirectexportentries" type="sdo">
