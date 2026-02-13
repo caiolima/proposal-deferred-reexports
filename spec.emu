@@ -2130,7 +2130,7 @@ contributors: Nicolò Ribaudo
                     1. Append _ee_ to _localExportEntries_.
                   1. Else,
                     1. NOTE: This is a re-export of a single name.
-                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], <ins>[[ImportedNames]]: ~empty~</ins> } to _indirectExportEntries_.
+                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _indirectExportEntries_.
               1. Else if _ee_.[[ImportName]] is ~all-but-default~, then
                 1. Assert: _ee_.[[ExportName]] is *null*.
                 1. Append _ee_ to _starExportEntries_.
