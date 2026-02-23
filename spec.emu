@@ -1814,10 +1814,10 @@ contributors: Nicolò Ribaudo
                 [[ImportName]]
               </td>
               <td>
-                a String, *null*, ~all~, ~all-but-default~, or <ins>~filtered~</ins>
+                a String, *null*, ~all~, ~all-but-default~, or <ins>~filtered-namespace~</ins>
               </td>
               <td>
-                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|. ~all~ is used for `export * as ns from "mod"` declarations. ~all-but-default~ is used for `export * from "mod"` declarations. <ins>~filtered~ is used for `export {x, y} as ns from "mod"` declarations where only selected exports are included in the namespace.</ins>
+                The name under which the desired binding is exported by the module identified by [[ModuleRequest]]. *null* if the |ExportDeclaration| does not have a |ModuleSpecifier|. ~all~ is used for `export * as ns from "mod"` declarations. ~all-but-default~ is used for `export * from "mod"` declarations. <ins>~filtered-namespace~ is used for `export {x, y} as ns from "mod"` declarations where only selected exports are included in the namespace.</ins>
               </td>
             </tr>
             <tr>
@@ -1839,7 +1839,7 @@ contributors: Nicolò Ribaudo
                 <ins>a List of Strings or ~empty~</ins>
               </td>
               <td>
-                <ins>When [[ImportName]] is ~filtered~, this field contains the list of export names to include in the namespace object. For all other values of [[ImportName]], this field is ~empty~.</ins>
+                <ins>When [[ImportName]] is ~filtered-namespace~, this field contains the list of export names to include in the namespace object. For all other values of [[ImportName]], this field is ~empty~.</ins>
               </td>
             </tr>
           </table>
@@ -2081,7 +2081,7 @@ contributors: Nicolò Ribaudo
                   <ins>*"mod"*</ins>
                 </td>
                 <td>
-                  <ins>~filtered~</ins>
+                  <ins>~filtered-namespace~</ins>
                 </td>
                 <td>
                   <ins>*null*</ins>
@@ -2101,7 +2101,7 @@ contributors: Nicolò Ribaudo
                   <ins>*"mod"*</ins>
                 </td>
                 <td>
-                  <ins>~filtered~</ins>
+                  <ins>~filtered-namespace~</ins>
                 </td>
                 <td>
                   <ins>*null*</ins>
@@ -2400,7 +2400,7 @@ contributors: Nicolò Ribaudo
                     1. Assert: _module_ does not provide the direct binding for this export.
                     1. <ins>Assert: _e_.[[NamespaceNamesFilter]] is ~empty~.</ins>
                     1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
-                  1. <ins>Else if _e_.[[ImportName]] is ~filtered~, then</ins>
+                  1. <ins>Else if _e_.[[ImportName]] is ~filtered-namespace~, then</ins>
                     1. <ins>Assert: _module_ does not provide the direct binding for this export.</ins>
                     1. <ins>Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~filtered-namespace~, [[NamespaceNamesFilter]]: _e_.[[NamespaceNamesFilter]] }.</ins>
                   1. Else,
@@ -2459,9 +2459,9 @@ contributors: Nicolò Ribaudo
                     1. If _existingRequest_ is ~empty~ and ModuleRequestsKeyEqual(_r_, _nextRequest_) is *true* and _r_.[[Phase]] is _nextRequest_.[[Phase]], then
                       1. Set _existingRequest_ to _r_.
                   1. Let _newImportedNames_ be ~all~.
-                  1. Assert: _oie_.[[ImportName]] is a String, ~filtered~, or ~all~.
+                  1. Assert: _oie_.[[ImportName]] is a String, ~filtered-namespace~, or ~all~.
                   1. If _oie_.[[ImportName]] is a String, set _newImportedNames_ to « _oie_.[[ImportName]] ».
-                  1. If _oie_.[[ImportName]] is ~filtered~, set _newImportedNames_ to _oie_.[[NamespaceNamesFilter]].
+                  1. If _oie_.[[ImportName]] is ~filtered-namespace~, set _newImportedNames_ to _oie_.[[NamespaceNamesFilter]].
                   1. If _existingRequest_ is ~empty~, then
                     1. Let _request_ be the ModuleRequest Record { [[Specifier]]: _nextRequest_.[[Specifier]], [[Attributes]]: _nextRequest_.[[Attributes]], [[Phase]]: _nextRequest_.[[Phase]], [[ImportedNames]]: _newImportedNames_ }.
                     1. Append _request_ to _requests_.
@@ -3030,7 +3030,7 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. <ins>Let _exportName_ be the StringValue of |ModuleExportName|.</ins>
           1. <ins>Let _importedNames_ be the ImportedNames of |NamedExports|.</ins>
-          1. <ins>Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, [[NamespaceNamesFilter]]: _importedNames_ }.</ins>
+          1. <ins>Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered-namespace~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, [[NamespaceNamesFilter]]: _importedNames_ }.</ins>
           1. <ins>Return « _entry_ ».</ins>
         </emu-alg>
         <emu-grammar>NamedExports : `{` `}`</emu-grammar>
