@@ -2523,7 +2523,7 @@ contributors: Nicolò Ribaudo
 
         NameSpaceImport :
           `*` `as` ImportedBinding
-          <ins>NamedImports `as` ImportedBinding</ins>
+          <ins>NamedExports `as` ImportedBinding</ins>
 
         NamedImports :
           `{` `}`
@@ -2559,6 +2559,10 @@ contributors: Nicolò Ribaudo
           IdentifierName
           StringLiteral
       </emu-grammar>
+
+      <emu-note>
+        <p><ins>The |NameSpaceImport| production used |NamedExports| and not |NamedImports| on the left-hand side of `as` because the imported names do not introduce bindings in the local scope but properties on an object, so any string is valid. An example is `import { "with two spaces" } as ns from "module";`</ins></p>
+      </emu-note>
 
       <emu-clause id="sec-static-semantics-importentries" oldids="sec-module-semantics-static-semantics-importentries,sec-imports-static-semantics-importentries" type="sdo" number="2">
         <h1>Static Semantics: ImportEntries ( ): a List of ImportEntry Records</h1>
@@ -2625,10 +2629,10 @@ contributors: Nicolò Ribaudo
           1. Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~namespace-object~, [[LocalName]]: _localName_<ins>, [[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
-        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-grammar><ins>NameSpaceImport : NamedExports `as` ImportedBinding</ins></emu-grammar>
         <emu-alg>
           1. <ins>Let _localName_ be the StringValue of |ImportedBinding|.</ins>
-          1. <ins>Let _importedNames_ be the ImportedNames of |NamedImports|.</ins>
+          1. <ins>Let _importedNames_ be the ImportedNames of |NamedExports|.</ins>
           1. <ins>Let _entry_ be the ImportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~filtered-namespace-object~, [[LocalName]]: _localName_, [[NamespaceNamesFilter]]: _importedNames_ }.</ins>
           1. <ins>Return « _entry_ ».</ins>
         </emu-alg>
@@ -2679,9 +2683,9 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. <ins>Return ~all~.</ins>
         </emu-alg>
-        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
+        <emu-grammar><ins>NameSpaceImport : NamedExports `as` ImportedBinding</ins></emu-grammar>
         <emu-alg>
-          1. <ins>Return the ImportedNames of |NamedImports|.</ins>
+          1. <ins>Return the ImportedNames of |NamedExports|.</ins>
         </emu-alg>
         <emu-grammar>ImportClause : ImportedDefaultBinding `,` NamedImports</emu-grammar>
         <emu-alg>
