@@ -2312,6 +2312,8 @@ contributors: Nicolò Ribaudo
               </tr>
             </table>
           </emu-table>
+
+          <p style="background-color: yellow;">TODO: We need to consider also name aliases through `as`</p>
         </emu-clause>
 
         <emu-clause id="sec-source-text-module-record-module-record-methods">
