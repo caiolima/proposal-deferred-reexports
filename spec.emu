@@ -644,17 +644,6 @@ contributors: Nicolò Ribaudo
                 The name of the binding within that module, or ~namespace~ if the export is the module's namespace object.
               </td>
             </tr>
-            <tr>
-              <td>
-                <ins>[[DeferredInitialization]]</ins>
-              </td>
-              <td>
-                <ins>~empty~ or an Abstract Closure</ins>
-              </td>
-              <td>
-                <ins>The information necessary for a module to initialize a filtered namespace object as a local binding into the module that re-exports it, upon importing that re-export.</ins>
-              </td>
-            </tr>
           </table>
         </emu-table>
 
