@@ -194,9 +194,7 @@ contributors: Nicolò Ribaudo
                   1. Return ~unused~.
                 1. Let _asyncDepsEvaluationPromises_ be a new empty List.
                 1. For each Module Record _dep_ of _evaluationList_, append _dep_.Evaluate() to _asyncDepsEvaluationPromises_.
-                1. Let _iterator_ be CreateListIteratorRecord(_asyncDepsEvaluationPromises_).
-                1. Let _pc_ be ! NewPromiseCapability(%Promise%).
-                1. Let _evaluatePromise_ be ! PerformPromiseAll(_iterator_, %Promise%, _pc_, %Promise.resolve%).
+                1. Let _evaluatePromise_ be SafePerformPromiseAll(_asyncDepsEvaluationPromises_).
               1. Else,
                 1. Assert: _phase_ is ~evaluation~.
                 1. Let _evaluatePromise_ be _module_.Evaluate().
@@ -2398,7 +2396,11 @@ contributors: Nicolò Ribaudo
                   1. If _e_.[[ImportName]] is ~all~, then
                     1. Assert: _module_ does not provide the direct binding for this export.
                     1. <ins>Assert: _e_.[[NamespaceNamesFilter]] is ~empty~.</ins>
-                    1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
+                    1. If _e_.[[ModuleRequest]].[[Phase]] is ~defer~, then
+                      1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~deferred-namespace~ }.
+                    1. Else,
+                      1. Assert: _e_.[[Phase]] is ~evaluation~.
+                      1. Return ResolvedBinding Record { [[Module]]: _importedModule_, [[BindingName]]: ~namespace~ }.
                   1. <ins>Else if _e_.[[ImportName]] is ~filtered-namespace~, then</ins>
                     1. <ins>NOTE: `export { ... } as ns from "mod"` introduces a local internal binding in the module that contains the |ExportDeclaration|. That binding is created by <emu-xref href="#sec-source-text-module-record-initialize-environment">InitializeEnvironment</emu-xref>, but it's only initialized the first time it's resolved, to avoid initializing internal bindings of unrequested `export defer` declarations.</ins>
                     1. <ins>Let _env_ be _module_.[[Environment]].</ins>
