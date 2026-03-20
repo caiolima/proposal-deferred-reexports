@@ -2587,7 +2587,7 @@ contributors: Nicolò Ribaudo
           </li>
         </ul>
         <emu-note>
-          <p><ins>The above rule means that each LocalBindings of |NamedImports| is treated as an |ImportedBinding|.</ins></p>
+          <p><ins>The above rules means that each LocalBindings of |NamedImports| is treated as an |ImportedBinding|.</ins></p>
         </emu-note>
 
         <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
