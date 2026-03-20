@@ -2169,6 +2169,9 @@ contributors: Nicolò Ribaudo
                   1. If _ie_.[[ImportName]] is ~namespace-object~, then
                     1. NOTE: This is a re-export of an imported module namespace object.
                     1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
+                  1. <ins>Else if _ie_.[[ImportName]] is ~filtered-namespace-object~, then</ins>
+                    1. <ins>NOTE: This is a re-export of an imported filtered namespace object.</ins>
+                    1. <ins>Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: ~filtered-namespace~, [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], [[NamespaceNamesFilter]]: _ie_.[[NamespaceNamesFilter]] } to _indirectExportEntries_.</ins>
                   1. Else,
                     1. NOTE: This is a re-export of a single name.
                     1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _indirectExportEntries_.
