@@ -2713,23 +2713,11 @@ contributors: Nicolò Ribaudo
         </h1>
         <dl class="header">
         </dl>
-        <emu-grammar>ImportClause : NameSpaceImport</emu-grammar>
-        <emu-alg>
-          1. <ins>Return the ImportedNames of |NameSpaceImport|.</ins>
-        </emu-alg>
         <emu-grammar>ImportClause : ImportedDefaultBinding `,` NameSpaceImport</emu-grammar>
         <emu-alg>
-          1. <ins>Let _names1_ be the ImportedNames of |ImportedDefaultBinding|.</ins>
-          1. <ins>Let _names2_ be the ImportedNames of |NameSpaceImport|.</ins>
-          1. <ins>Return MergeImportedNames(_names1_, _names2_).</ins>
-        </emu-alg>
-        <emu-grammar><ins>NameSpaceImport : `*` `as` ImportedBinding</ins></emu-grammar>
-        <emu-alg>
-          1. <ins>Return ~all~.</ins>
-        </emu-alg>
-        <emu-grammar><ins>NameSpaceImport : NamedImports `as` ImportedBinding</ins></emu-grammar>
-        <emu-alg>
-          1. <ins>Return the ImportedNames of |NamedImports|.</ins>
+          1. Let _names1_ be the ImportedNames of |ImportedDefaultBinding|.
+          1. Let _names2_ be the ImportedNames of |NameSpaceImport|.
+          1. Return MergeImportedNames(_names1_, _names2_).
         </emu-alg>
         <emu-grammar>ImportClause : ImportedDefaultBinding `,` NamedImports</emu-grammar>
         <emu-alg>
@@ -2740,6 +2728,14 @@ contributors: Nicolò Ribaudo
         <emu-grammar>ImportedDefaultBinding : ImportedBinding</emu-grammar>
         <emu-alg>
           1. Return « *"default"* ».
+        </emu-alg>
+        <emu-grammar>NameSpaceImport : `*` `as` ImportedBinding</emu-grammar>
+        <emu-alg>
+          1. Return ~all~.
+        </emu-alg>
+        <emu-grammar>NameSpaceImport : NamedImports `as` ImportedBinding</emu-grammar>
+        <emu-alg>
+          1. Return the ImportedNames of |NamedImports|.
         </emu-alg>
         <emu-grammar>NamedImports : `{` `}`</emu-grammar>
         <emu-alg>
@@ -2761,25 +2757,25 @@ contributors: Nicolò Ribaudo
           1. Let _importedName_ be the StringValue of |ModuleExportName|.
           1. Return « _importedName_ ».
         </emu-alg>
-        <emu-grammar><ins>NamedExports : `{` `}`</ins></emu-grammar>
+        <emu-grammar>NamedExports : `{` `}`</emu-grammar>
         <emu-alg>
-          1. <ins>Return « ».</ins>
+          1. Return « ».
         </emu-alg>
-        <emu-grammar><ins>ExportsList : ExportsList `,` ExportSpecifier</ins></emu-grammar>
+        <emu-grammar>ExportsList : ExportsList `,` ExportSpecifier</emu-grammar>
         <emu-alg>
-          1. <ins>Let _names1_ be the ImportedNames of |ExportsList|.</ins>
-          1. <ins>Let _names2_ be the ImportedNames of |ExportSpecifier|.</ins>
-          1. <ins>Return MergeImportedNames(_names1_, _names2_).</ins>
+          1. Let _names1_ be the ImportedNames of |ExportsList|.
+          1. Let _names2_ be the ImportedNames of |ExportSpecifier|.
+          1. Return MergeImportedNames(_names1_, _names2_).
         </emu-alg>
-        <emu-grammar><ins>ExportSpecifier : ModuleExportName</ins></emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName</emu-grammar>
         <emu-alg>
-          1. <ins>Let _importedName_ be the StringValue of |ModuleExportName|.</ins>
-          1. <ins>Return « _importedName_ ».</ins>
+          1. Let _importedName_ be the StringValue of |ModuleExportName|.
+          1. Return « _importedName_ ».
         </emu-alg>
-        <emu-grammar><ins>ExportSpecifier : ModuleExportName `as` ModuleExportName</ins></emu-grammar>
+        <emu-grammar>ExportSpecifier : ModuleExportName `as` ModuleExportName</emu-grammar>
         <emu-alg>
-          1. <ins>Let _importedName_ be the StringValue of the first |ModuleExportName|.</ins>
-          1. <ins>Return « _importedName_ ».</ins>
+          1. Let _importedName_ be the StringValue of the first |ModuleExportName|.
+          1. Return « _importedName_ ».
         </emu-alg>
 
         <emu-clause id="sec-MergeImportedNames" type="abstract operation">
