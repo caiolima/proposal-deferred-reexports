@@ -50,11 +50,8 @@ contributors: Nicolò Ribaudo
           1. Assert: _targetModule_ is not *undefined*.
           1. If _binding_.[[BindingName]] is ~namespace~, then
             1. Return GetModuleNamespace(_targetModule_, ~evaluation~, <ins>~all~</ins>).
-            1. <del>NOTE: The phase here is always ~evaluation~ because in `import defer * as x from "..."; export { x }`, _binding_.[[BindingName]] is *"x"* and not ~namespace~.</del>
-            1. <span style="background-color: yellow;">TODO: What about `export defer * as x from "...";`? We need to distinguish the phase here.</span>
-          1. <ins>If _binding_.[[BindingName]] is ~filtered-namespace~, then</ins>
-            1. <ins>Return GetModuleNamespace(_targetModule_, ~evaluation~, _binding_.[[NamespaceNamesFilter]]).</ins>
-            1. <span style="background-color: yellow;">TODO: What about `export defer { foo, bar } as x from "...";`? We need to distinguish the phase here.</span>
+          1. If _binding_.[[BindingName]] is ~deferred-namespace~, then
+            1. Return GetModuleNamespace(_targetModule_, ~defer~, <ins>~all~</ins>).
           1. Let _targetEnv_ be _targetModule_.[[Environment]].
           1. If _targetEnv_ is ~empty~, throw a *ReferenceError* exception.
           1. Return ? _targetEnv_.GetBindingValue(_binding_.[[BindingName]], *true*).
@@ -564,7 +561,7 @@ contributors: Nicolò Ribaudo
                 ): a ResolvedBinding Record, *null*, or ~ambiguous~
               </td>
               <td>
-                <p>It returns the binding of a name exported by this module. Bindings are represented by <ins>ResolvedBinding Records</ins> <del>a <em>ResolvedBinding Record</em>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~ }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~.</del> It returns *null* if the name cannot be resolved, or ~ambiguous~ if multiple bindings were found.</p>
+                <p>It returns the binding of a name exported by this module. Bindings are represented by <ins>ResolvedBinding Records</ins> <del>a <em>ResolvedBinding Record</em>, of the form { [[Module]]: Module Record, [[BindingName]]: String | ~namespace~| ~deferred-namespace~ }. If the export is a Module Namespace Object without a direct binding in any module, [[BindingName]] will be set to ~namespace~ or ~deferred-namespace~ (depending on whether the binding comes from a deferred import or not).</del> It returns *null* if the name cannot be resolved, or ~ambiguous~ if multiple bindings were found.</p>
                 <p>Each time this operation is called with a specific _exportName_, _resolveSet_ pair as arguments it must return the same result.</p>
                 <p>LoadRequestedModules must have completed successfully prior to invoking this method.</p>
               </td>
@@ -2167,10 +2164,11 @@ contributors: Nicolò Ribaudo
                 1. If _importedBoundNames_ does not contain _ee_.[[LocalName]], then
                   1. Append _ee_ to _localExportEntries_.
                 1. Else,
+                  1. NOTE: When exporting a binding or namespace object which was originally imported from another module, the ExportEntry Record is rewritten to match the form it would have if the binding or namespace object had been re-exported directly from the original module rather than imported then exported. This allows conflicts which arise from exporting the same binding or namespace twice under the same name through `export * from` to be ignored rather than being treated as ambiguous in step <emu-xref href="#step-resolveexport-conflict"></emu-xref> of <emu-xref href="#sec-resolveexport">the ResolveExport concrete method of Source Text Module Records</emu-xref>.
                   1. Let _ie_ be the element of _importEntries_ whose [[LocalName]] is _ee_.[[LocalName]].
                   1. If _ie_.[[ImportName]] is ~namespace-object~, then
                     1. NOTE: This is a re-export of an imported module namespace object.
-                    1. Append _ee_ to _localExportEntries_.
+                    1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]] } to _indirectExportEntries_.
                   1. Else,
                     1. NOTE: This is a re-export of a single name.
                     1. Append the ExportEntry Record { [[ModuleRequest]]: _ie_.[[ModuleRequest]], [[ImportName]]: _ie_.[[ImportName]], [[LocalName]]: *null*, [[ExportName]]: _ee_.[[ExportName]], <ins>[[NamespaceNamesFilter]]: ~empty~</ins> } to _indirectExportEntries_.
@@ -2416,8 +2414,8 @@ contributors: Nicolò Ribaudo
                   1. Assert: _resolution_ is a ResolvedBinding Record.
                   1. If _starResolution_ is *null*, then
                     1. Set _starResolution_ to _resolution_.
-                  1. Else,
-                    1. Assert: There is more than one `*` import that includes the requested name.
+                  1. [id="step-resolveexport-conflict"] Else,
+                    1. Assert: There is more than one `*` export that includes the requested name.
                     1. If _resolution_.[[Module]] and _starResolution_.[[Module]] are not the same Module Record, return ~ambiguous~.
                     1. If _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]] and either _resolution_.[[BindingName]] or _starResolution_.[[BindingName]] is ~namespace~, return ~ambiguous~.
                     1. If _resolution_.[[BindingName]] is a String, _starResolution_.[[BindingName]] is a String, and _resolution_.[[BindingName]] is not _starResolution_.[[BindingName]], return ~ambiguous~.
