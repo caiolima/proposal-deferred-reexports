@@ -2596,7 +2596,7 @@ contributors: Nicolò Ribaudo
             <ins>It is a Syntax Error if the the |NamedImports| Contains |AliasedImportSpecifier|.</ins>
           </li>
           <li>
-            <ins>It is a Syntax Error if the the LocalBindings of |NamedImports| contains any duplicate entries.</ins>
+            <ins>It is a Syntax Error if the the ImportedNames of |NamedImports| contains any duplicate entries.</ins>
           </li>
         </ul>
 
@@ -2831,7 +2831,7 @@ contributors: Nicolò Ribaudo
 
       <emu-clause id="sec-imports-LocalBindings" type="sdo">
         <h1>
-          <ins>Static Semantics: LocalBindings ( ): a List of Parse Nodes</ins>
+          <ins>Static Semantics: LocalBindings ( ): a List of either |StringLiteral| or |IdentifierName| Parse Nodes</ins>
         </h1>
         <dl class="header">
         </dl>
@@ -2845,13 +2845,18 @@ contributors: Nicolò Ribaudo
           1. Let _bindings2_ be LocalBindings of |ImportSpecifier|.
           1. Return the list-concatenation of _bindings1_ and _bindings2_.
         </emu-alg>
-        <emu-grammar>ImportSpecifier : ModuleExportName</emu-grammar>
-        <emu-alg>
-          1. Return « |ModuleExportName| ».
-        </emu-alg>
         <emu-grammar>AliasedImportSpecifier : ModuleExportName `as` ImportedBinding</emu-grammar>
         <emu-alg>
-          1. Return « |ImportedBinding| ».
+          1. Return the LocalBindings of |ImportedBinding|.
+        </emu-alg>
+        <emu-grammar>ModuleExportName : IdentifierName</emu-grammar>
+        <emu-grammar>Identifier : IdentifierName</emu-grammar>
+        <emu-alg>
+          1. Return a List whose sole element is |IdentifierName|.
+        </emu-alg>
+        <emu-grammar>ModuleExportName : StringLiteral</emu-grammar>
+        <emu-alg>
+          1. Return a List whose sole element is |StringLiteral|.
         </emu-alg>
       </emu-clause>
     </emu-clause>
@@ -2893,7 +2898,11 @@ contributors: Nicolò Ribaudo
 
         ExportSpecifier :
           ModuleExportName
-          ModuleExportName `as` ModuleExportName
+          <del>ModuleExportName `as` ModuleExportName</del>
+          <ins>AliasedExportSpecifier</ins>
+
+        <ins>AliasedExportSpecifier :
+          ModuleExportName `as` ModuleExportName</ins>
       </emu-grammar>
 
       <emu-clause id="sec-exports-static-semantics-early-errors">
@@ -2914,6 +2923,15 @@ contributors: Nicolò Ribaudo
         <ul>
           <li>
             <ins>It is a Syntax Error if |ExportFromClause| is `*`.</ins>
+          </li>
+        </ul>
+        <emu-grammar><ins>NamedNamespaceExport : NamedExports `as` ModuleExportName</ins></emu-grammar>
+        <ul>
+          <li>
+            <ins>It is a Syntax Error if the the |NamedExports| Contains |AliasedExportSpecifier|.</ins>
+          </li>
+          <li>
+            <ins>It is a Syntax Error if the the ImportedNames of |NamedExports| contains any duplicate entries.</ins>
           </li>
         </ul>
       </emu-clause>
