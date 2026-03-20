@@ -2596,7 +2596,7 @@ contributors: Nicolò Ribaudo
             <ins>It is a Syntax Error if the the |NamedImports| Contains |AliasedImportSpecifier|.</ins>
           </li>
           <li>
-            <ins>It is a Syntax Error if the the ImportedNames of |NamedImports| contains any duplicate entries.</ins>
+            <ins>It is a Syntax Error if the the FilteredNamespaceNames of |NamedImports| contains any duplicate entries.</ins>
           </li>
         </ul>
 
@@ -2708,7 +2708,7 @@ contributors: Nicolò Ribaudo
       <emu-clause id="sec-ImportedNames" type="sdo">
         <h1>
           <ins>
-            Static Semantics: ImportedNames ( ): ~all~ or a List of Strings
+            Static Semantics: ImportedNames ( ): ~all~ or a List of unique Strings
           </ins>
         </h1>
         <dl class="header">
@@ -2855,6 +2855,51 @@ contributors: Nicolò Ribaudo
           1. Return a List whose sole element is |StringLiteral|.
         </emu-alg>
       </emu-clause>
+
+      <emu-clause id="sec-FilteredNamespaceNames" type="sdo">
+        <h1>
+          <ins>
+            Static Semantics: FilteredNamespaceNames ( ): a List of Strings
+          </ins>
+        </h1>
+        <dl class="header">
+        </dl>
+        <emu-grammar>
+          NamedImports : `{` `}`
+          NamedExports : `{` `}`
+        </emu-grammar>
+        <emu-grammar>
+          ImportsList : ImportsList `,` ImportSpecifier
+        </emu-grammar>
+        <emu-alg>
+          1. Let _names1_ be FilteredNamespaceNames of |ImportsList|.
+          1. Let _names2_ be FilteredNamespaceNames of |ImportSpecifier|.
+          1. Return the list-concatenation of _names1_ and _names2_.
+        </emu-alg>
+        <emu-grammar>
+          ExportsList : ExportsList `,` ExportSpecifier
+        </emu-grammar>
+        <emu-alg>
+          1. Let _names1_ be FilteredNamespaceNames of |ExportsList|.
+          1. Let _names2_ be FilteredNamespaceNames of |ExportSpecifier|.
+          1. Return the list-concatenation of _names1_ and _names2_.
+        </emu-alg>
+        <emu-grammar>
+          ImportSpecifier : ModuleExportName
+          ExportSpecifier : ModuleExportName
+        </emu-grammar>
+        <emu-alg>
+          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
+        </emu-alg>
+        <emu-grammar>
+          ImportSpecifier : AliasedImportSpecifier
+          ExportSpecifier : AliasedExportSpecifier
+        </emu-grammar>
+        <emu-alg>
+          1. NOTE: It is an early error if a filtered namespace contains an |AliasedImportSpecifier| or |AliasedExportSpecifier| (see <emu-xref href="#sec-imports-static-semantics-early-errors"></emu-xref> and <emu-xref href="#sec-exports-static-semantics-early-errors"></emu-xref>).
+          1. Return a new empty List.
+        </emu-alg>
+      </emu-clause>
     </emu-clause>
 
     <emu-clause id="sec-exports">
@@ -2921,7 +2966,7 @@ contributors: Nicolò Ribaudo
             <ins>It is a Syntax Error if the the |NamedExports| Contains |AliasedExportSpecifier|.</ins>
           </li>
           <li>
-            <ins>It is a Syntax Error if the the ImportedNames of |NamedExports| contains any duplicate entries.</ins>
+            <ins>It is a Syntax Error if the the FilteredNamespaceNames of |NamedExports| contains any duplicate entries.</ins>
           </li>
         </ul>
       </emu-clause>
