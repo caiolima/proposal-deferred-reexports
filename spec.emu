@@ -2877,15 +2877,9 @@ contributors: Nicolò Ribaudo
 
         ExportFromClause :
           `*`
-          <del>`*` `as` ModuleExportName</del>
-          <ins>NamedNamespaceExport</ins>
-          NamedExports
-
-        <ins>
-        NamedNamespaceExport :
           `*` `as` ModuleExportName
-          NamedExports `as` ModuleExportName
-        </ins>
+          NamedExports
+          <ins>NamedExports `as` ModuleExportName</ins>
 
         NamedExports :
           `{` `}`
@@ -2925,7 +2919,7 @@ contributors: Nicolò Ribaudo
             <ins>It is a Syntax Error if |ExportFromClause| is `*`.</ins>
           </li>
         </ul>
-        <emu-grammar><ins>NamedNamespaceExport : NamedExports `as` ModuleExportName</ins></emu-grammar>
+        <emu-grammar><ins>ExportFromClause : NamedExports `as` ModuleExportName</ins></emu-grammar>
         <ul>
           <li>
             <ins>It is a Syntax Error if the the |NamedExports| Contains |AliasedExportSpecifier|.</ins>
@@ -2969,17 +2963,13 @@ contributors: Nicolò Ribaudo
         <emu-alg>
           1. Return a new empty List.
         </emu-alg>
-        <emu-grammar>ExportFromClause : NamedNamespaceExport</emu-grammar>
-        <emu-alg>
-          1. Return the ExportedNames of |NamedNamespaceExport|.
-        </emu-alg>
         <emu-grammar>
-          <ins>NamedNamespaceExport :
+          ExportFromClause :
             `*` `as` ModuleExportName
-            NamedExports `as` ModuleExportName</ins>
+            <ins>NamedExports `as` ModuleExportName</ins>
         </emu-grammar>
         <emu-alg>
-          1. <ins>Return a List whose sole element is the StringValue of |ModuleExportName|.</ins>
+          1. Return a List whose sole element is the StringValue of |ModuleExportName|.
         </emu-alg>
         <emu-grammar>ExportFromClause : NamedExports</emu-grammar>
         <emu-alg>
@@ -3108,17 +3098,13 @@ contributors: Nicolò Ribaudo
           1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all-but-default~, [[LocalName]]: *null*, [[ExportName]]: *null*, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
-        <emu-grammar>ExportFromClause : NamedNamespaceExport</emu-grammar>
-        <emu-alg>
-          1. Return the ExportEntriesForModule of |NamedNamespaceExport| with argument _module_.
-        </emu-alg>
-        <emu-grammar>NamedNamespaceExport : `*` `as` ModuleExportName</emu-grammar>
+        <emu-grammar>ExportFromClause : `*` `as` ModuleExportName</emu-grammar>
         <emu-alg>
           1. Let _exportName_ be the StringValue of |ModuleExportName|.
           1. Let _entry_ be the ExportEntry Record { [[ModuleRequest]]: _module_, [[ImportName]]: ~all~, [[LocalName]]: *null*, [[ExportName]]: _exportName_, <ins>[[NamespaceNamesFilter]]: ~empty~</ins> }.
           1. Return « _entry_ ».
         </emu-alg>
-        <emu-grammar><ins>NamedNamespaceExport : NamedExports `as` ModuleExportName</ins></emu-grammar>
+        <emu-grammar><ins>ExportFromClause : NamedExports `as` ModuleExportName</ins></emu-grammar>
         <emu-alg>
           1. <ins>Let _exportName_ be the StringValue of |ModuleExportName|.</ins>
           1. <ins>Let _importedNames_ be the ImportedNames of |NamedExports|.</ins>
