@@ -2216,8 +2216,9 @@ contributors: Nicolò Ribaudo
               1. Else,
                 1. Let _resolution_ be _importedModule_.ResolveExport(_in_.[[ImportName]]).
                 1. If _resolution_ is either *null* or ~ambiguous~, throw a *SyntaxError* exception.
-                1. If _resolution_.[[BindingName]] is ~namespace~, then
-                  1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]], ~evaluation~, <ins>~all~</ins>).
+                1. If _resolution_.[[BindingName]] is ~namespace~ or ~deferred-namespace~, then
+                  1. If _resolution_.[[BindingName]] is ~namespace~, let _phase_ be ~evaluation~, else let _phase_ be ~defer~.
+                  1. Let _namespace_ be GetModuleNamespace(_resolution_.[[Module]], _phase_, <ins>~all~</ins>).
                   1. <span style="background-color: yellow;">TODO: What about `export defer * as x from "...";`? We need to distinguish the phase here.</span>
                   1. Perform ! _env_.CreateImmutableBinding(_in_.[[LocalName]], *true*).
                   1. Perform ! _env_.InitializeBinding(_in_.[[LocalName]], _namespace_).
