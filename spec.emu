@@ -1773,23 +1773,6 @@ contributors: Nicolò Ribaudo
                   <ins>« *"x"*, *"y"* »</ins>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <ins>`import {x as a, y as b} as ns from "mod";`</ins>
-                </td>
-                <td>
-                  <ins>*"mod"*</ins>
-                </td>
-                <td>
-                  <ins>~filtered-namespace-object~</ins>
-                </td>
-                <td>
-                  <ins>*"ns"*</ins>
-                </td>
-                <td>
-                  <ins>« *"x"*, *"y"* »</ins>
-                </td>
-              </tr>
             </table>
           </emu-table>
         </emu-note>
