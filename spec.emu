@@ -2096,26 +2096,6 @@ contributors: Nicolò Ribaudo
                   <ins>« *"x"*, *"y"* »</ins>
                 </td>
               </tr>
-              <tr>
-                <td>
-                  <ins>`export { x as a1, y as a2 } as ns from "mod";`</ins>
-                </td>
-                <td>
-                  <ins>*"ns"*</ins>
-                </td>
-                <td>
-                  <ins>*"mod"*</ins>
-                </td>
-                <td>
-                  <ins>~filtered-namespace~</ins>
-                </td>
-                <td>
-                  <ins>*null*</ins>
-                </td>
-                <td>
-                  <ins>« *"x"*, *"y"* »</ins>
-                </td>
-              </tr>
             </table>
           </emu-table>
         </emu-note>
