@@ -222,13 +222,13 @@ contributors: Nicolò Ribaudo
               1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *TypeError* object »).
               1. Return _promiseCapability_.[[Promise]].
             1. Sort _attributes_ according to the lexicographic order of their [[Key]] field, treating the value of each such field as a sequence of UTF-16 code unit values. NOTE: This sorting is observable only in that hosts are prohibited from changing behaviour based on the order in which attributes are enumerated.
-            1. <ins>Let _filter_ be Completion(Get(_options_, *"filter"*)).</ins>
-            1. <ins>IfAbruptRejectPromise(_filter_, _promiseCapability_).</ins>
-            1. <ins>If _filter_ is not *undefined*, then</ins>
-              1. <ins>If _filter_ is not an Object, then</ins>
+            1. <ins>Let _exports_ be Completion(Get(_options_, *"exports"*)).</ins>
+            1. <ins>IfAbruptRejectPromise(_exports_, _promiseCapability_).</ins>
+            1. <ins>If _exports_ is not *undefined*, then</ins>
+              1. <ins>If _exports_ is not an Object, then</ins>
                 1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; a newly created *TypeError* object &raquo;).</ins>
                 1. <ins>Return _promiseCapability_.[[Promise]].</ins>
-              1. <ins>Let _iteratorRecord_ be Completion(GetIterator(_filter_, ~sync~)).</ins>
+              1. <ins>Let _iteratorRecord_ be Completion(GetIterator(_exports_, ~sync~)).</ins>
               1. <ins>IfAbruptRejectPromise(_iteratorRecord_, _promiseCapability_).</ins>
               1. <ins>Let _names_ be a new empty List.</ins>
               1. <ins>Let _done_ be *false*.</ins>
@@ -277,6 +277,12 @@ contributors: Nicolò Ribaudo
               1. If _link_ is an abrupt completion, then
                 1. Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _link_.[[Value]] &raquo;).
                 1. Return ~unused~.
+              1. <ins>If _importedNames_ is a List of Strings, then</ins>
+                1. <ins>For each String _name_ of _importedNames_, do</ins>
+                  1. <ins>Let _resolvable_ be Completion(EnsureResolvableBinding(_module_, _name_, ~disallow-ambiguous~)).</ins>
+                  1. <ins>If _resolvable_ is an abrupt completion, then</ins>
+                    1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _resolvable_.[[Value]] &raquo;).</ins>
+                    1. <ins>Return ~unused~.</ins>
               1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_, _phase_, <ins>_importedNames_,</ins> and _promiseCapability_ and performs the following steps when called:
                 1. Let _namespace_ be GetModuleNamespace(_module_, _phase_, <ins>_importedNames_</ins>).
                 1. Perform ! Call(_promiseCapability_.[[Resolve]], *undefined*, &laquo; _namespace_ &raquo;).
