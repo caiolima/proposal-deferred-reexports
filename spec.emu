@@ -283,7 +283,7 @@ contributors: Nicolò Ribaudo
                 1. <ins>For each String _name_ of _importedNames_, do</ins>
                   1. <ins>Let _resolvable_ be Completion(EnsureResolvableBinding(_module_, _name_, ~disallow-ambiguous~)).</ins>
                   1. <ins>If _resolvable_ is an abrupt completion, then</ins>
-                    1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, &laquo; _resolvable_.[[Value]] &raquo;).</ins>
+                    1. <ins>Perform ! Call(_promiseCapability_.[[Reject]], *undefined*, « a newly created *ReferenceError* object »).</ins>
                     1. <ins>Return ~unused~.</ins>
               1. Let _fulfilledClosure_ be a new Abstract Closure with no parameters that captures _module_, _phase_, <ins>_importedNames_,</ins> and _promiseCapability_ and performs the following steps when called:
                 1. Let _namespace_ be GetModuleNamespace(_module_, _phase_, <ins>_importedNames_</ins>).
