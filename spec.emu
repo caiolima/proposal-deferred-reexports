@@ -302,7 +302,7 @@ contributors: Nicolò Ribaudo
                 1. <del>Let _evaluatePromise_ be _module_.Evaluate().</del>
               1. <ins>If _phase_ is ~defer~, let _evaluationList_ be GatherAsynchronousTransitiveDependencies(_module_).</ins>
               1. <ins>Else, let _evaluationList_ be « _module_ ».</ins>
-              1. <ins>Let _optionalIndirectRequests_ be _module_.GetOptionalIndirectExportsModuleRequests(~all~).</ins>
+              1. <ins>Let _optionalIndirectRequests_ be _module_.GetOptionalIndirectExportsModuleRequests(_importedNames_).</ins>
               1. <ins>Perform ListAppendUnique(_evaluationList_, GatherAsynchronousTransitiveDependenciesForRequests(_module_, _optionalIndirectRequests_, « »)).</ins>
               1. <ins>If _evaluationList_ is empty, then</ins>
                 1. <ins>Assert: _phase_ is ~defer~.</ins>
